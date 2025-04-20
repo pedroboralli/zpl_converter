@@ -1,40 +1,234 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>ZPL Converter Online</title>
+    <style>
+        body {
+            background: #fafbfc;
+            font-family: 'Inter', Arial, sans-serif;
+        }
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 32px 24px 32px 24px;
+            display: flex;
+            gap: 32px;
+        }
+        .left, .right {
+            flex: 1;
+        }
+        .dropzone {
+            border: 2px dashed #d0d7de;
+            border-radius: 12px;
+            background: #f6f8fa;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+        }
+        .dropzone:hover {
+            border-color: #0969da;
+        }
+        .dropzone input[type="file"] {
+            display: none;
+        }
+        .dropzone-icon {
+            font-size: 38px;
+            color: #b6bfc9;
+            margin-bottom: 8px;
+        }
+        .radio-group {
+            margin-bottom: 18px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 16px;
+            gap: 8px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 14px;
+            color: #444;
+        }
+        .form-group input {
+            width: 90px;
+            padding: 6px 8px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+        .btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 0;
+            width: 100%;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 18px;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .preview-box {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            background: #f9fafb;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .preview-box img {
+            max-width: 120px;
+            max-height: 120px;
+            opacity: 0.7;
+        }
+        .download-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #2563eb;
+            font-size: 17px;
+            text-decoration: none;
+            margin-top: 8px;
+        }
+        .download-link svg {
+            width: 20px;
+            height: 20px;
+        }
+        .error {
+            color: #e11d48;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>ZPL Converter Online</h2>
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
-    <form method="post" enctype="multipart/form-data">
-        <label>
-            <input type="radio" name="mode" value="to_zpl" checked onchange="toggleFields()"> Imagem → ZPL
-        </label>
-        <label>
-            <input type="radio" name="mode" value="from_zpl" onchange="toggleFields()"> ZPL → Imagem
-        </label>
-        <br><br>
-        <input type="file" name="file" required><br><br>
-        <div id="params">
-            Largura (cm): <input type="number" step="0.1" name="largura" value="10"><br>
-            Altura (cm): <input type="number" step="0.1" name="altura" value="5"><br>
-            Quantidade: <input type="number" name="quantidade" value="1"><br>
+    <form class="container" method="post" enctype="multipart/form-data" id="mainForm">
+        <div class="left">
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+            <label class="dropzone" id="dropzone">
+                <span class="dropzone-icon">+</span>
+                <span id="dropzone-text">Drop file here or click to upload</span>
+                <input type="file" name="file" id="fileInput" required>
+            </label>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="mode" value="to_zpl" checked onchange="toggleFields()"> Image to ZPL
+                </label>
+                <label>
+                    <input type="radio" name="mode" value="from_zpl" onchange="toggleFields()"> ZPL to Image
+                </label>
+            </div>
+            <div id="params">
+                <div class="form-group">
+                    <label for="largura">Label Width (cm)</label>
+                    <input type="number" step="0.1" name="largura" id="largura" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="altura">Label Height (cm)</label>
+                    <input type="number" step="0.1" name="altura" id="altura" value="7.5">
+                </div>
+                <div class="form-group">
+                    <label for="quantidade">Quantity</label>
+                    <input type="number" name="quantidade" id="quantidade" value="1">
+                </div>
+            </div>
+            <button type="submit" class="btn">Generate and Download</button>
+            {% if result_file %}
+                <a class="download-link" href="{{ result_file }}">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"/>
+                    </svg>
+                    Download
+                </a>
+            {% endif %}
         </div>
-        <br>
-        <button type="submit">Processar</button>
+        <div class="right">
+            <div>
+                <div style="font-weight: 600; font-size: 17px; margin-bottom: 10px;">Preview</div>
+                <div class="preview-box" id="previewBox">
+                    <img id="previewImg" src="https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg" alt="Preview">
+                </div>
+            </div>
+        </div>
     </form>
-    {% if result_file %}
-        <p><a href="{{ result_file }}">Baixar resultado</a></p>
-    {% endif %}
     <script>
+        // Toggle params fields
         function toggleFields() {
             var mode = document.querySelector('input[name="mode"]:checked').value;
             document.getElementById('params').style.display = (mode === 'to_zpl') ? 'block' : 'none';
         }
         toggleFields();
+
+        // Dropzone logic
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewImg = document.getElementById('previewImg');
+        const previewBox = document.getElementById('previewBox');
+        const dropzoneText = document.getElementById('dropzone-text');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#2563eb';
+        });
+        dropzone.addEventListener('dragleave', e => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#d0d7de';
+        });
+        dropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#d0d7de';
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updatePreview();
+            }
+        });
+        fileInput.addEventListener('change', updatePreview);
+
+        function updatePreview() {
+            const file = fileInput.files[0];
+            if (!file) {
+                previewImg.src = "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg";
+                return;
+            }
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => previewImg.src = e.target.result;
+                reader.readAsDataURL(file);
+            } else {
+                previewImg.src = "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg";
+            }
+            dropzoneText.textContent = file.name;
+        }
     </script>
 </body>
 </html>
