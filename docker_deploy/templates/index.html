@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZPL Converter Web</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-light);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input[type="file"] {
+            padding: 0.5rem;
+            background: #f1f5f9;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ZPL Converter</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('to-zpl')">Imagem para ZPL</div>
+        <div class="tab" onclick="switchTab('to-image')">ZPL para Imagem</div>
+    </div>
+
+    <!-- Image to ZPL Form -->
+    <div id="to-zpl" class="form-section active">
+        <form action="/convert/to_zpl" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Arquivo de Imagem ou PDF</label>
+                <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf" required>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Largura (cm)</label>
+                    <input type="number" name="width" value="10" step="0.1" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Altura (cm)</label>
+                    <input type="number" name="height" value="7.5" step="0.1" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Quantidade de Cópias (Comando ^PQ)</label>
+                <input type="number" name="quantity" value="1" required>
+            </div>
+
+            <button type="submit">Converter e Baixar</button>
+        </form>
+    </div>
+
+    <!-- ZPL to Image Form -->
+    <div id="to-image" class="form-section">
+        <form action="/convert/to_image" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Arquivo ZPL (.txt)</label>
+                <input type="file" name="file" accept=".txt" required>
+                <div class="hint">Deve conter comandos ~DGR ou ^GFA</div>
+            </div>
+
+            <button type="submit">Gerar Visualização</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.form-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+    }
+</script>
+
+</body>
+</html>

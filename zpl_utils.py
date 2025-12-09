@@ -1,6 +1,9 @@
 import os
 from PIL import Image
 import fitz  # PyMuPDF
+import re
+import zlib
+import base64
 
 def load_image(path):
     """Carrega PNG, JPG ou PDF (primeira página)."""
@@ -52,48 +55,77 @@ def convert_image_to_zpl(path, largura, altura, quantidade):
     return convert_pil_image_to_zpl(img, quantidade)
 
 def convert_zpl_to_image(zpl_path, output_path):
-    """Lê arquivo .txt com ZPL (~DGR) e reconstrói PNG, suportando HEX e Z64."""
-    import re
-    import zlib
-    import base64
-
-    with open(zpl_path, "r") as f:
+    """Converte ZPL com ~DGR ou ^GFA para PNG."""
+    with open(zpl_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # HEX padrão
+    # Tenta ~DGR (RAM)
     m = re.search(r"~DGR:[^,]+,(\d+),(\d+),([0-9A-F]+)", content)
     if m:
         total_bytes = int(m.group(1))
         width_bytes = int(m.group(2))
         hexdata = m.group(3)
         raw = bytes.fromhex(hexdata)
+        height = total_bytes // width_bytes
+        width = width_bytes * 8
     else:
-        # Z64 compactado
-        m = re.search(r"~DGR:[^,]+,(\d+),(\d+),:Z64:([A-Za-z0-9+/=]+)", content)
+        # Tenta ^GFA (Field Graphics)
+        m = re.search(r"\^GFA,(\d+),(\d+),(\d+),([A-Za-z0-9,]+)", content)
         if not m:
-            raise ValueError("ZPL inválido ou ~DGR não encontrado.")
+            raise ValueError("ZPL inválido ou ~DGR/^GFA não encontrado.")
         total_bytes = int(m.group(1))
-        width_bytes = int(m.group(2))
-        z64data = m.group(3)
-        # decode base64, then zlib decompress
-        compressed = base64.b64decode(z64data)
-        raw = zlib.decompress(compressed)
+        bytes_used = int(m.group(2))
+        bytes_per_row = int(m.group(3))
+        data = m.group(4).replace('\n', '').replace('\r', '')
+        # Decodifica o formato ASCII-Hex compactado do ZPL
+        raw = decode_zpl_ascii_hex(data, bytes_used)
+        width_bytes = bytes_per_row
+        height = bytes_used // bytes_per_row
+        width = width_bytes * 8
 
-    height = total_bytes // width_bytes
-    width = width_bytes * 8
-
-    from PIL import Image
     img = Image.new("1", (width, height))
     pixels = img.load()
     idx = 0
     for y in range(height):
         for b in range(width_bytes):
+            if idx >= len(raw):
+                break
             byte = raw[idx]
             idx += 1
             for bit in range(8):
                 x = b*8 + (7-bit)
                 if x < width:
                     pixels[x, y] = 0 if (byte & (1 << bit)) else 1
-
     img.save(output_path)
     return output_path
+
+def decode_zpl_ascii_hex(data, bytes_expected):
+    """Decodifica o formato ASCII-Hex compactado do ^GFA."""
+    # O ZPL usa um esquema de compressão simples para ^GFA (run-length encoding)
+    # Veja: https://www.zebra.com/content/dam/zebra/manuals/en-us/software/zpl-zbi2-pm-en.pdf (procure por ^GF)
+    result = bytearray()
+    i = 0
+    while i < len(data):
+        c = data[i]
+        if c in ' \n\r\t,':
+            i += 1
+            continue
+        if c == ':':  # : repete 0x00 20 vezes
+            result.extend([0x00] * 20)
+            i += 1
+        elif c == ';':  # ; repete 0xFF 20 vezes
+            result.extend([0xFF] * 20)
+            i += 1
+        elif c == '!':  # ! repete o próximo caractere 400 vezes
+            i += 1
+            if i < len(data):
+                v = int(data[i], 16)
+                result.extend([v] * 400)
+            i += 1
+        elif c.isalnum():
+            v = int(c, 16)
+            result.append(v)
+            i += 1
+        else:
+            i += 1
+    return bytes(result[:bytes_expected])

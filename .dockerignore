@@ -1,0 +1,19 @@
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+.env
+venv/
+
+# Project specific
+convertidos/
+output/
+dist/
+build/
+docker_deploy/
+.git/
+.gitignore
+readme.txt
+main.spec
